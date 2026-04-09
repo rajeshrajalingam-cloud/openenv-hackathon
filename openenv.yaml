@@ -1,0 +1,35 @@
+name: my_env_v4
+version: 1.0
+description: Simulates project management scenarios including delay recovery, resource crunch, and priority conflicts
+
+entry_point: my_env_v4:MyEnvV4Env
+
+action:
+  type: object
+  properties:
+    message:
+      type: string
+  required: [message]
+
+observation:
+  type: object
+  properties:
+    delay:
+      type: number
+    resources:
+      type: object
+      additionalProperties:
+        type: number
+    echoed_message:
+      type: string
+  required: [delay, resources, echoed_message]
+
+reward:
+  type: number
+  minimum: 0.0
+  maximum: 1.0
+
+tasks:
+  - name: delay_recovery
+  - name: resource_crunch
+  - name: priority_conflict
