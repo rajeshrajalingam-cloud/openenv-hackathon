@@ -1,3 +1,9 @@
+---
+title: openenv-hackathon
+sdk: docker
+app_port: 7860
+pinned: false
+---
 # OpenEnv Hackathon Submission
 ## Overview  
 This project implements an adaptive decision support system for project delivery, modeled as a reinforcement learning-inspired environment. It simulates real-world project execution scenarios and applies dynamic decision-making to improve delivery outcomes.
