@@ -12,7 +12,7 @@ RUN pip install uv
 RUN uv sync
 
 # Expose the port FastAPI will run on
-EXPOSE 8000
+EXPOSE 7860
 
 # Run FastAPI with Uvicorn
 CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]

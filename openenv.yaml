@@ -6,6 +6,7 @@ type: space
 runtime: fastapi
 app: server.app:app
 port: 7860
+
 tasks:
   - id: delay_recovery
     difficulty: easy

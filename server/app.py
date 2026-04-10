@@ -1,24 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import uvicorn
 import os
-
-print("LOADED APP FROM:", os.path.abspath(__file__))
 
 from my_env_v4 import MyEnvV4Env
 from models import MyEnvV4Action
 
-app = FastAPI(title="OpenEnv Hackathon")
-
-@app.get("/ping-test")
-
-def ping_test():
-    return {"ok": True, "file": __file__}
-
+app = FastAPI(title="OpenEnv Hackathon", version="1.0.0")
 
 
 @app.get("/")
 def root():
-    return {"message": "OpenEnv server running"}
+    return {
+        "message": "OpenEnv server running",
+        "status": "ok",
+    }
 
 
 @app.get("/health")
@@ -26,52 +21,62 @@ def health():
     return {"status": "ok"}
 
 
+@app.get("/ping-test")
+def ping_test():
+    return {
+        "ok": True,
+        "file": os.path.abspath(__file__),
+    }
+
+
 # -------------------------------
-# Grader Endpoints (CRITICAL)
+# Grader Endpoints
 # -------------------------------
 
 @app.get("/grade/delay_recovery")
-async def grade_delay():
+async def grade_delay_recovery():
     score = await run_task("delay_recovery")
     return {"score": score, "reward": score}
 
 
 @app.get("/grade/resource_crunch")
-async def grade_resource():
+async def grade_resource_crunch():
     score = await run_task("resource_crunch")
     return {"score": score, "reward": score}
 
 
 @app.get("/grade/priority_conflict")
-async def grade_priority():
+async def grade_priority_conflict():
     score = await run_task("priority_conflict")
     return {"score": score, "reward": score}
 
 
 # -------------------------------
-# Core runner (reuses your env)
+# Core Runner
 # -------------------------------
 
 async def run_task(task_name: str) -> float:
     os.environ["MY_ENV_V4_TASK"] = task_name
-    env = await MyEnvV4Env.from_docker_image(None)
-
-    rewards = []
-    last_action = None
+    env = None
 
     try:
+        env = await MyEnvV4Env.from_docker_image(None)
         result = await env.reset()
+
+        rewards = []
+        last_action = None
 
         for step in range(1, env.max_steps + 1):
             if result.done:
                 break
 
             obs = result.observation
+            resources = obs.resources if obs.resources else {}
 
             action_text = decide_action(
                 task=task_name,
                 delay=obs.delay,
-                resources=obs.resources,
+                resources=resources,
                 step=step,
                 last_action=last_action,
             )
@@ -79,29 +84,37 @@ async def run_task(task_name: str) -> float:
             last_action = action_text
             result = await env.step(MyEnvV4Action(message=action_text))
 
-            rewards.append(result.reward or 0.0)
+            reward_value = result.reward if result.reward is not None else 0.0
+            rewards.append(float(reward_value))
 
             if result.done:
                 break
 
         if not rewards:
-            return 0.01
+            return 0.1
 
         score = sum(rewards) / len(rewards)
 
-        # Clamp to validator-safe range
-        return max(0.01, min(0.99, score))
+        # Clamp to validator-friendly range
+        return max(0.0, min(1.0, round(score, 4)))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Task grading failed: {str(e)}")
 
     finally:
-        await env.close()
+        if env is not None:
+            try:
+                await env.close()
+            except Exception:
+                pass
 
 
 # -------------------------------
-#  Same logic as inference.py
+# Decision Logic
 # -------------------------------
 
-def decide_action(task: str, delay: int, resources: dict, step: int, last_action):
-    total_resources = sum(resources.values())
+def decide_action(task: str, delay: int, resources: dict, step: int, last_action: str | None):
+    total_resources = sum(resources.values()) if resources else 0
 
     if task == "delay_recovery":
         if step <= 2:
@@ -159,6 +172,7 @@ def decide_action(task: str, delay: int, resources: dict, step: int, last_action
         else:
             action = "optimize workload"
 
+    # Prevent repeating the same action over and over
     if last_action and action == last_action:
         if action == "optimize workload":
             action = "reassign resources"
@@ -171,8 +185,12 @@ def decide_action(task: str, delay: int, resources: dict, step: int, last_action
 
 
 # -------------------------------
-# Entry point
+# Entry Point
 # -------------------------------
 
 def main():
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
+
+
+if __name__ == "__main__":
+    main()
