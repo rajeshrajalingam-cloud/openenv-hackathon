@@ -1,35 +1,20 @@
-name: my_env_v4
-version: 1.0
-description: Simulates project management scenarios including delay recovery, resource crunch, and priority conflicts
-
-entry_point: my_env_v4:MyEnvV4Env
-
-action:
-  type: object
-  properties:
-    message:
-      type: string
-  required: [message]
-
-observation:
-  type: object
-  properties:
-    delay:
-      type: number
-    resources:
-      type: object
-      additionalProperties:
-        type: number
-    echoed_message:
-      type: string
-  required: [delay, resources, echoed_message]
-
-reward:
-  type: number
-  minimum: 0.0
-  maximum: 1.0
-
+spec_version: 1
+name: openenv-hackathon
+version: "1.0.0"
+description: "Adaptive project management environment"
+type: space
+runtime: fastapi
+app: server.app:app
+port: 7860
 tasks:
-  - name: delay_recovery
-  - name: resource_crunch
-  - name: priority_conflict
+  - id: delay_recovery
+    difficulty: easy
+    grader: /grade/delay_recovery
+
+  - id: resource_crunch
+    difficulty: medium
+    grader: /grade/resource_crunch
+
+  - id: priority_conflict
+    difficulty: hard
+    grader: /grade/priority_conflict
